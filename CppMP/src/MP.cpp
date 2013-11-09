@@ -46,12 +46,12 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 	double px = sto[0];
 	double py = sto[1];
 
-	for(int j=0; j<dist/m_simulator->m_distOneStep; j++)
+	for(int j=0; j<dist/m_simulator->m_distOneStep; j++)//number of points to check is line segment length/step-size
 	{
 		//loop checks sto against every obstacle for collision
 		const int n = m_simulator->GetNrObstacles();
     
-		for(int i = 0; i < n; ++i)
+		for(int i = 0; i < n; ++i)//check one point against every obstacle for collision
 		{
 			const double x = m_simulator->GetObstacleCenterX(i);
 			const double y = m_simulator->GetObstacleCenterY(i);
