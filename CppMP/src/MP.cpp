@@ -45,7 +45,7 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 	////check for collision of points along line w/ obstacles
 	double px = sto[0];
 	double py = sto[1];
-
+	
 	for(int j=0; j<dist/m_simulator->m_distOneStep; j++)//number of points to check is line segment length/step-size
 	{
 		//loop checks sto against every obstacle for collision
@@ -71,7 +71,16 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 		py += dy * m_simulator->m_distOneStep * (double)j;
 	}
 
-	//successful completion of loops = edge not in collision --> add vertex to tree
+	/////successful completion of loops = edge not in collision --> add vertex to tree
+	//first create the vertex
+	Vertex* v = new Vertex();
+
+	v->m_parent   = vid;   
+	v->m_nchildren= 0;    
+	v->m_state[0] = sto[0];
+	v->m_state[1] = sto[1];
+
+	AddVertex(v);
 }
 
 void MotionPlanner::ExtendRandom(void)
