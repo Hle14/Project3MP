@@ -71,7 +71,7 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 		py += dy * m_simulator->m_distOneStep * (double)j;
 	}
 
-	//
+	//successful completion of loops = edge not in collision --> add vertex to tree
 }
 
 void MotionPlanner::ExtendRandom(void)
