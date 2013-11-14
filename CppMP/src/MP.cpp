@@ -34,34 +34,27 @@ MotionPlanner::~MotionPlanner(void)
 void MotionPlanner::ExtendTree(const int vid,const double sto[])
 {
 	//check if step distance small (i.e. ||vid - sto|| < distOneStep)
-	double dx = sto[0] - m_vertices[vid]->m_state[0];
-	double dy = sto[1] - m_vertices[vid]->m_state[1];
-	double dist = sqrt(pow(dx,2) + pow(dy,2));
+	double distx = sto[0] - m_vertices[vid]->m_state[0];
+	double disty = sto[1] - m_vertices[vid]->m_state[1];
+	double dist = sqrt(pow(distx,2) + pow(disty,2));
 	
-	double rr = m_simulator->GetRobotRadius();
-	
-	/*if(dist > m_simulator->GetDistOneStep())
-	{
-		return;
-	}*/
-	
-	////check for collision of points along line w/ obstacles
-	//double px = sto[0];
-	//double py = sto[1];
-
 	double px = m_vertices[vid]->m_state[0];
 	double py = m_vertices[vid]->m_state[1];
 	double distOneStep = m_simulator->GetDistOneStep();
-	
-	for(int j=0; j < dist/distOneStep; j++)//number of points to check is line segment length/step-size
-	{
-		//loop checks sto against every obstacle for collision
-		const int n = m_simulator->GetNrObstacles();
 
+	double dx = distx / dist * distOneStep;
+	double dy = disty / dist * distOneStep;
+	
+	//loop checks sto against every obstacle for collision
+	const int n = m_simulator->GetNrObstacles();
+
+	//for(int j=0; j < dist/distOneStep; j++)//number of points to check is line segment length/step-size
+	//{
 		//get next point along edge to test for collision
-		px += dx / (dist - distOneStep) * distOneStep;
-		py += dy / (dist - distOneStep) * distOneStep;
-    
+		px += dx;
+		py += dy;
+
+		double rr = m_simulator->GetRobotRadius();
 		for(int i = 0; i < n; ++i)//check one point against every obstacle for collision
 		{
 			double x = m_simulator->GetObstacleCenterX(i);
@@ -69,7 +62,7 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 			double r = m_simulator->GetObstacleRadius(i);
 			double d = sqrt(pow((px - x),2) + pow((py - y),2));
 	
-			if(rr + r > d)
+			if((rr + r) > d)
 			{
 				return; //vertex would put robot in collision with obstacle
 			}
@@ -77,35 +70,14 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 
 		Vertex* v = new Vertex();
 
-		v->m_parent   = vid;   
+		//v->m_parent   = vid;   
+		v->m_parent = vid;
 		v->m_nchildren= 0;    
-		v->m_state[0] = sto[0];
-		v->m_state[1] = sto[1];
+		v->m_state[0] = px;
+		v->m_state[1] = py;
 
-		AddVertex(v);
-
-		usleep(2000);
-
-		//std::cin.get();
-
-		//get next point along edge to test for collision
-		//px += dx / distOneStep;
-		//py += dy / distOneStep;
-		
-	}
-
-	/////successful completion of loops = edge not in collision --> add vertex to tree
-	//first create the vertex
-	/*
-	Vertex* v = new Vertex();
-
-	v->m_parent   = vid;   
-	v->m_nchildren= 0;    
-	v->m_state[0] = sto[0];
-	v->m_state[1] = sto[1];
-
-	AddVertex(v);
-	*/
+		AddVertex(v);		
+	//}
 }
 
 void MotionPlanner::ExtendRandom(void)
