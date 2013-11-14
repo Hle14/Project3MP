@@ -2,6 +2,8 @@
 #include "PseudoRandom.hpp"
 #include "MyTimer.hpp"
 #include <cstring>
+#include <iostream>
+#include <unistd.h>
 
 MotionPlanner::MotionPlanner(Simulator * const simulator)
 {
@@ -57,8 +59,8 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 		const int n = m_simulator->GetNrObstacles();
 
 		//get next point along edge to test for collision
-		px += dx / distOneStep;
-		py += dy / distOneStep;
+		px += dx / (dist - distOneStep) * distOneStep;
+		py += dy / (dist - distOneStep) * distOneStep;
     
 		for(int i = 0; i < n; ++i)//check one point against every obstacle for collision
 		{
@@ -67,7 +69,7 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 			double r = m_simulator->GetObstacleRadius(i);
 			double d = sqrt(pow((px - x),2) + pow((py - y),2));
 	
-			if(d < rr + r)
+			if(rr + r > d)
 			{
 				return; //vertex would put robot in collision with obstacle
 			}
@@ -82,9 +84,14 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 
 		AddVertex(v);
 
+		usleep(2000);
+
+		//std::cin.get();
+
 		//get next point along edge to test for collision
 		//px += dx / distOneStep;
 		//py += dy / distOneStep;
+		
 	}
 
 	/////successful completion of loops = edge not in collision --> add vertex to tree
