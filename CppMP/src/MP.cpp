@@ -4,6 +4,13 @@
 #include <cstring>
 #include <iostream>
 #include <vector>
+#define MYCHOICE 1;
+/* mychoice value determines which definition of ExtendMyApproach is compiled
+
+0	selection of vid is deterministic by shortest distance from goal
+1	selection of vid is probabilistic w/ weight = 1/(1 + distance from goal)
+
+*/
 
 MotionPlanner::MotionPlanner(Simulator * const simulator)
 {
@@ -239,16 +246,17 @@ void MotionPlanner::ExtendMyApproach(void)
 
 	////next select the node/vertex in tree to attach sto to
 
-	//calculate distances from each vertex to goal and use closest one
+	//calculate distances from each vertex to goal
 	double gx = m_simulator->GetGoalCenterX();
 	double gy = m_simulator->GetGoalCenterY();
 
 	int vid = 0;
-	int loopcount = 0;
+	int loopcount = 0; //PRINTLN DEBUGGING
+#if !MYCHOICE //deterministic by distance
 	double min_dist = 1000000; //arbitrarily large starting minimum distance
 	for(int i=0; i<=m_vertices.size()-1; i++)
 	{
-		//printf("\nentered the loop!");
+		
 		double distx = gx - m_vertices[i]->m_state[0];
 		double disty = gy - m_vertices[i]->m_state[1];
 		double dist = sqrt(pow(distx,2) + pow(disty,2));
@@ -261,9 +269,40 @@ void MotionPlanner::ExtendMyApproach(void)
 		}
 		loopcount++;
 	}
-	//printf("\nloopcount = %d\tvertices = %d",loopcount,m_vertices.size());
+#elif MYCHOICE//probabilistic by distance
+
+	double total_dist = 0;
+	std::vector<double> dist;
+
+	//calculate the sums 0 to vid for each vertex
+	for(int i=0; i<=m_vertices.size()-1; i++)
+	{	
+		double distx = gx - m_vertices[i]->m_state[0];
+		double disty = gy - m_vertices[i]->m_state[1];
+		
+		//total_dist += 1.0/(1.0 + sqrt(pow(distx,2) + pow(disty,2))); //w = 1/(1 + dist)
+		total_dist += 1.0/pow((1.0 + sqrt(pow(distx,2) + pow(disty,2))),2); // w = 1/(1 + dist)^2 stronger effect
+		dist.push_back(total_dist);
+		
+		loopcount++;
+	}
+
+	//obtain a random weight
+	double rand_weight = PseudoRandomUniformReal(0,total_dist);
+
+	//determine which vertex corresponds to the weight (i.e. a sum of vertices w/ i=0:vid)
+	for(int i=0; i<dist.size(); i++)
+	{
+		if(rand_weight <= dist[i])
+		{
+			vid = i;
+			break;
+		}
+	}
+#endif
+
 	ExtendTree(vid,sto);
-	//printf("\nExtendTree calle once\tvid = %d",vid);
+	
 //MY CODE*/
     
     m_totalSolveTime += ElapsedTime(&clk);
