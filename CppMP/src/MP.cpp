@@ -3,7 +3,7 @@
 #include "MyTimer.hpp"
 #include <cstring>
 #include <iostream>
-#include <unistd.h>
+#include <vector>
 
 MotionPlanner::MotionPlanner(Simulator * const simulator)
 {
@@ -15,7 +15,7 @@ MotionPlanner::MotionPlanner(Simulator * const simulator)
     vinit->m_nchildren= 0;    
     vinit->m_state[0] = m_simulator->GetRobotCenterX();
     vinit->m_state[1] = m_simulator->GetRobotCenterY();
-
+	
     AddVertex(vinit);
     m_vidAtGoal = -1;
     m_totalSolveTime = 0;
@@ -48,13 +48,14 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 	//loop checks sto against every obstacle for collision
 	const int n = m_simulator->GetNrObstacles();
 
-	//for(int j=0; j < dist/distOneStep; j++)//number of points to check is line segment length/step-size
-	//{
+	double rr = m_simulator->GetRobotRadius();
+
+	for(int j=0; j < dist/distOneStep; j++)//number of points to check is line segment length/step-size
+	{
 		//get next point along edge to test for collision
 		px += dx;
 		py += dy;
 
-		double rr = m_simulator->GetRobotRadius();
 		for(int i = 0; i < n; ++i)//check one point against every obstacle for collision
 		{
 			double x = m_simulator->GetObstacleCenterX(i);
@@ -70,14 +71,31 @@ void MotionPlanner::ExtendTree(const int vid,const double sto[])
 
 		Vertex* v = new Vertex();
 
-		//v->m_parent   = vid;   
-		v->m_parent = vid;
+		if(j==0)
+		{
+			v->m_parent = vid;
+		} else
+		{
+			v->m_parent = m_vertices.size() - 1;
+		}
 		v->m_nchildren= 0;    
 		v->m_state[0] = px;
 		v->m_state[1] = py;
 
-		AddVertex(v);		
-	//}
+		AddVertex(v);
+
+		//check dist to goal from v
+		double xToGoal = m_simulator->GetGoalCenterX() - px;
+		double yToGoal = m_simulator->GetGoalCenterY() - py;
+		double vToGoal = sqrt(pow(xToGoal,2) + pow(yToGoal,2));
+		double rr = m_simulator->GetRobotRadius();
+		//if(vToGoal <= 0.5) //TRY TO USE GOAL CENTER/RADIUS AND ROBOT CENTER/RADIUS HERE INSTEAD
+		if(vToGoal <= rr)
+		{
+			m_vidAtGoal = v->m_parent;
+			break;
+		}
+	}
 }
 
 void MotionPlanner::ExtendRandom(void)
@@ -113,7 +131,39 @@ void MotionPlanner::ExtendRRT(void)
     Clock clk;
     StartTime(&clk);
  
-//your code
+//MY CODE
+
+	//first select a configuration to attach to selected node/vertex in tree
+	double sto[2];
+	if (PseudoRandomUniformReal(0,1) <= 0.1) //10% of the time, try to attach a path from a tree branch to q.goal
+	{
+		sto[0] = m_simulator->GetGoalCenterX();
+		sto[1] = m_simulator->GetGoalCenterY();
+	} else //90% of the time, sample a random configuration to add to tree
+	{
+		m_simulator->SampleState(sto);
+	}
+
+	//next determine which vertex in tree is closest to new configuration
+	int vid = 0;
+	double min_dist = 10000000; //default arbitrarily large min_dist
+
+	for(int i=0; i<=m_vertices.size() - 1; i++)
+	{
+		double distx = sto[0] - m_vertices[i]->m_state[0];
+		double disty = sto[1] - m_vertices[i]->m_state[1];
+		double dist = sqrt(pow(distx,2) + pow(disty,2));
+
+		if(dist < min_dist)
+		{
+			vid = i;
+			min_dist = dist;
+		}
+	}
+
+	//attempt to add configuration sto to the tree
+	ExtendTree(vid,sto);
+//MY CODE
     
     m_totalSolveTime += ElapsedTime(&clk);
 }
@@ -124,7 +174,48 @@ void MotionPlanner::ExtendEST(void)
     Clock clk;
     StartTime(&clk);
 
-//your code    
+//MY CODE 
+
+	//printf("EST WAS CALLED!!");
+
+	//first select a configuration to attach to selected node/vertex in tree
+	double sto[2];
+	if (PseudoRandomUniformReal(0,1) <= 0.1) //10% of the time, try to attach a path from a tree branch to q.goal
+	{
+		sto[0] = m_simulator->GetGoalCenterX();
+		sto[1] = m_simulator->GetGoalCenterY();
+	} else //90% of the time, sample a random configuration to add to tree
+	{
+		m_simulator->SampleState(sto);
+	}
+
+	////next determine which vertex in tree should be added based on no. of children
+
+	//find sum of m_nchildren for all vertices in tree
+	double total_weight = 0;
+	
+	std::vector<double> partial_weight; //each index holds the sum weight of all vertices w/ vid < index
+	for(int i=0; i<=m_vertices.size()-1; i++)
+	{
+		total_weight += 1.0/(1.0 + m_vertices[i]->m_nchildren); //weight of each vertex inversely proportional to its degree
+		partial_weight.push_back(total_weight);
+	}
+
+	//printf("total_weight = %d",total_weight);
+	double random_weight = PseudoRandomUniformReal(0,total_weight);
+	int vid = 0;
+	for(int i=0; i<=partial_weight.size()-1; i++)
+	{
+		//printf("\npartial weight[%d] = %d\n",partial_weight[i]);
+		if(random_weight <= partial_weight[i])
+		{
+			vid = i;
+			break;
+		}
+	}
+	//attempt to add configuration sto to the tree
+	ExtendTree(vid,sto);
+//MY CODE */
     m_totalSolveTime += ElapsedTime(&clk);
 }
 
@@ -134,7 +225,46 @@ void MotionPlanner::ExtendMyApproach(void)
     Clock clk;
     StartTime(&clk);
  
-//your code
+//MY CODE
+	//first select a configuration to attach to selected node/vertex in tree
+	double sto[2];
+	if (PseudoRandomUniformReal(0,1) <= 0.1) //10% of the time, try to attach a path from a tree branch to q.goal
+	{
+		sto[0] = m_simulator->GetGoalCenterX();
+		sto[1] = m_simulator->GetGoalCenterY();
+	} else //90% of the time, sample a random configuration to add to tree
+	{
+		m_simulator->SampleState(sto);
+	}
+
+	////next select the node/vertex in tree to attach sto to
+
+	//calculate distances from each vertex to goal and use closest one
+	double gx = m_simulator->GetGoalCenterX();
+	double gy = m_simulator->GetGoalCenterY();
+
+	int vid = 0;
+	int loopcount = 0;
+	double min_dist = 1000000; //arbitrarily large starting minimum distance
+	for(int i=0; i<=m_vertices.size()-1; i++)
+	{
+		//printf("\nentered the loop!");
+		double distx = gx - m_vertices[i]->m_state[0];
+		double disty = gy - m_vertices[i]->m_state[1];
+		double dist = sqrt(pow(distx,2) + pow(disty,2));
+
+		if(dist < min_dist)
+		{
+			
+			vid = i;
+			min_dist = dist;
+		}
+		loopcount++;
+	}
+	//printf("\nloopcount = %d\tvertices = %d",loopcount,m_vertices.size());
+	ExtendTree(vid,sto);
+	//printf("\nExtendTree calle once\tvid = %d",vid);
+//MY CODE*/
     
     m_totalSolveTime += ElapsedTime(&clk);
 }
