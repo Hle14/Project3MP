@@ -157,11 +157,12 @@ void MotionPlanner::ExtendRRT(void)
 
 	for(int i=0; i<=m_vertices.size() - 1; i++)
 	{
+		//calculate distance to new configuration for each vertex
 		double distx = sto[0] - m_vertices[i]->m_state[0];
 		double disty = sto[1] - m_vertices[i]->m_state[1];
 		double dist = sqrt(pow(distx,2) + pow(disty,2));
 
-		if(dist < min_dist)
+		if(dist < min_dist) //keep track of the vertex nearest to new config
 		{
 			vid = i;
 			min_dist = dist;
@@ -182,8 +183,6 @@ void MotionPlanner::ExtendEST(void)
     StartTime(&clk);
 
 //MY CODE 
-
-	//printf("EST WAS CALLED!!");
 
 	//first select a configuration to attach to selected node/vertex in tree
 	double sto[2];
@@ -208,12 +207,10 @@ void MotionPlanner::ExtendEST(void)
 		partial_weight.push_back(total_weight);
 	}
 
-	//printf("total_weight = %d",total_weight);
 	double random_weight = PseudoRandomUniformReal(0,total_weight);
 	int vid = 0;
 	for(int i=0; i<=partial_weight.size()-1; i++)
 	{
-		//printf("\npartial weight[%d] = %d\n",partial_weight[i]);
 		if(random_weight <= partial_weight[i])
 		{
 			vid = i;
@@ -251,7 +248,7 @@ void MotionPlanner::ExtendMyApproach(void)
 	double gy = m_simulator->GetGoalCenterY();
 
 	int vid = 0;
-	int loopcount = 0; //PRINTLN DEBUGGING
+
 #if !MYCHOICE //deterministic by distance
 	double min_dist = 1000000; //arbitrarily large starting minimum distance
 	for(int i=0; i<=m_vertices.size()-1; i++)
@@ -267,7 +264,7 @@ void MotionPlanner::ExtendMyApproach(void)
 			vid = i;
 			min_dist = dist;
 		}
-		loopcount++;
+
 	}
 #elif MYCHOICE//probabilistic by distance
 
