@@ -47,7 +47,8 @@ protected:
 
     void AddVertex(Vertex * const v);
 
-    void ExtendTree(const int vid,const double sto[]);
+    void ExtendTree(const int    vid,
+		    const double sto[]);
     
     Simulator            *m_simulator;
     std::vector<Vertex *> m_vertices;
